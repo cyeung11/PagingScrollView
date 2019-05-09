@@ -9,17 +9,9 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.view.animation.DecelerateInterpolator
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Scroller
-
-/**
- * A custom scroll view that has the ability to page.
- *
- * another ability is to have a separate background that change page only when the foreground change page and it won't scroll under normal situation.
- * To use this function, put the background scroll view into the the same frame layout and reference it with "background_traction_layout "
- */
 
 open class ReboundScrollView(
 
@@ -30,9 +22,6 @@ open class ReboundScrollView(
 ) : ScrollView(context, attrs, defStyleAttr), View.OnTouchListener, GestureDetector.OnGestureListener {
 
     var pageChangeThreshold = 20
-
-    protected var backgroundTractionScrollView: ScrollView? = null
-    protected var backgroundViewId = -1
 
     protected var gestureDetector: GestureDetector? = null
 
@@ -67,7 +56,6 @@ open class ReboundScrollView(
                     pageChangeThreshold = it?.getInt(R.styleable.ReboundScrollView_page_change_threshold, 20) ?:20
                     pageChangeThreshold = Math.min(100, pageChangeThreshold)
                     pageChangeThreshold = Math.max(0, pageChangeThreshold)
-                    backgroundViewId = it?.getResourceId(R.styleable.ReboundScrollView_background_traction_scrollview, -1) ?: -1
                 } finally {
                     it?.recycle()
                 }
@@ -89,33 +77,11 @@ open class ReboundScrollView(
         super.onFinishInflate()
         val view = if (childCount > 0) getChildAt(0) else null
 
-        if (view != null)
-            llMain = view as LinearLayout
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        if (backgroundViewId >= 0) {
-            if (parent is FrameLayout) {
-                val backgroundView = (parent as FrameLayout).findViewById<View?>(backgroundViewId)
-                if (backgroundView != null) {
-                    if (backgroundView is ScrollView) {
-                        backgroundTractionScrollView = backgroundView
-                    } else {
-                        throw IllegalArgumentException("$TAG: The background view must be a ScrollView")
-                    }
-                } else {
-                    throw IllegalStateException("$TAG: Background traction view is referred but cannot find inside of parent view!")
-                }
-            } else {
-                throw IllegalArgumentException("$TAG: This view must be inside of a FrameLayout to use background traction view")
-            }
+        if (view != null && view is LinearLayout) {
+            llMain = view
+        } else {
+            throw IllegalArgumentException("The view under ReboundScrollView must be a LinearLayout")
         }
-    }
-
-    override fun onDetachedFromWindow() {
-        backgroundTractionScrollView = null
-        super.onDetachedFromWindow()
     }
 
     override fun onSaveInstanceState(): Parcelable? {
@@ -227,7 +193,6 @@ open class ReboundScrollView(
         if (oldActiveItem != activeItem) {
             // Rebound to bottom of the new page
             this.smoothScrollTo(0, Math.max(activeView.bottom - this.measuredHeight, activeView.top))
-            backgroundTractionScrollView?.smoothScrollTo(0, Math.max(activeView.bottom - this.measuredHeight, activeView.top))
             onPageChangeListeners.forEach {
                 it.onPageChange(this, activeItem)
             }
@@ -236,7 +201,6 @@ open class ReboundScrollView(
             // rebound top of this page if current scroll position is not having active view using the whole screen
             // rebound to the top of this page if current scroll position is not at top position
             this.smoothScrollTo(0, activeView.top)
-            backgroundTractionScrollView?.smoothScrollTo(0, activeView.top)
         }
 
     }
@@ -271,7 +235,6 @@ open class ReboundScrollView(
         if (oldActiveItem != activeItem) {
             // Rebound to top of the new page
             this.smoothScrollTo(0, Math.min(activeView.bottom - this.measuredHeight, activeView.top))
-            backgroundTractionScrollView?.smoothScrollTo(0, Math.min(activeView.bottom - this.measuredHeight, activeView.top))
             onPageChangeListeners.forEach {
                 it.onPageChange(this, activeItem)
             }
@@ -279,7 +242,6 @@ open class ReboundScrollView(
         } else if (flingDisable || scrollY + this.measuredHeight > activeView.bottom){
             // Rebound to bottom of the old page
             this.smoothScrollTo(0, Math.max(activeView.bottom - this.measuredHeight, activeView.top))
-            backgroundTractionScrollView?.smoothScrollTo(0, Math.max(activeView.bottom - this.measuredHeight, activeView.top))
         }
 
     }
@@ -329,7 +291,6 @@ open class ReboundScrollView(
             activeItem -= 1
             flingDisable = llMain!!.getChildAt(activeItem).measuredHeight <= this.measuredHeight
             this.smoothScrollTo(0, Math.max(llMain!!.getChildAt(activeItem).top, llMain!!.getChildAt(activeItem).bottom - this.measuredHeight))
-            backgroundTractionScrollView?.smoothScrollTo(0, Math.max(llMain!!.getChildAt(activeItem).top, llMain!!.getChildAt(activeItem).bottom - this.measuredHeight))
 
             onPageChangeListeners.forEach {
                 it.onPageChange(this, activeItem)
@@ -342,7 +303,6 @@ open class ReboundScrollView(
             activeItem += 1
             flingDisable = llMain!!.getChildAt(activeItem).measuredHeight <= this.measuredHeight
             this.smoothScrollTo(0, llMain!!.getChildAt(activeItem).top)
-            backgroundTractionScrollView?.smoothScrollTo(0, llMain!!.getChildAt(activeItem).top)
 
             onPageChangeListeners.forEach {
                 it.onPageChange(this, activeItem)

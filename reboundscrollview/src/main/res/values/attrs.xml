@@ -2,7 +2,6 @@
 <resources>
     <declare-styleable name="ReboundScrollView">
         <attr name="page_change_threshold" format="integer" />
-        <attr name="background_traction_scrollview" format="reference"/>
     </declare-styleable>
 
 </resources>
