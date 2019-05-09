@@ -24,7 +24,7 @@ allprojects {
 #### App gradle
 ```
 dependencies {
-    implementation 'com.github.cyeung11:ReboundScrollView:1.0'
+    implementation 'com.github.cyeung11:ReboundScrollView:1.0.1'
 }
 ```
 
