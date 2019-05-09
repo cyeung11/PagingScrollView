@@ -6,7 +6,7 @@
         android:layout_height="match_parent"
         tools:context=".ExampleActivity">
 
-    <com.jkjk.reboundscrollview.ReboundScrollView
+    <com.jkjk.pagingscrollview.PagingScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
@@ -35,6 +35,6 @@
 
         </LinearLayout>
 
-    </com.jkjk.reboundscrollview.ReboundScrollView>
+    </com.jkjk.pagingscrollview.PagingScrollView>
 
 </FrameLayout>

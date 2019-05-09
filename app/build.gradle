@@ -7,7 +7,7 @@ apply plugin: 'kotlin-android-extensions'
 android {
     compileSdkVersion target_sdk
     defaultConfig {
-        applicationId "com.jkjk.rebound"
+        applicationId "com.jkjk.paging"
         minSdkVersion min_sdk
         targetSdkVersion target_sdk
         versionCode versionCode
@@ -23,7 +23,7 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation project(':reboundscrollview')
+    implementation project(':pagingscrollview')
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'com.android.support:appcompat-v7:28.0.0'
 }

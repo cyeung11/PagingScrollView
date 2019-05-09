@@ -1,4 +1,4 @@
-package com.jkjk.reboundscrollview
+package com.jkjk.pagingscrollview
 
 import android.content.Context
 import android.os.Parcel
@@ -13,7 +13,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Scroller
 
-open class ReboundScrollView(
+open class PagingScrollView(
 
     context: Context?,
     attrs: AttributeSet?,
@@ -49,11 +49,11 @@ open class ReboundScrollView(
         if (context != null) {
             context.theme?.obtainStyledAttributes(
                 attrs,
-                R.styleable.ReboundScrollView,
+                R.styleable.PagingScrollView,
                 0, 0).also {
 
                 try {
-                    pageChangeThreshold = it?.getInt(R.styleable.ReboundScrollView_page_change_threshold, 20) ?:20
+                    pageChangeThreshold = it?.getInt(R.styleable.PagingScrollView_page_change_threshold, 20) ?:20
                     pageChangeThreshold = Math.min(100, pageChangeThreshold)
                     pageChangeThreshold = Math.max(0, pageChangeThreshold)
                 } finally {
@@ -80,23 +80,23 @@ open class ReboundScrollView(
         if (view != null && view is LinearLayout) {
             llMain = view
         } else {
-            throw IllegalArgumentException("The view under ReboundScrollView must be a LinearLayout")
+            throw IllegalArgumentException("The view under PagingScrollView must be a LinearLayout")
         }
     }
 
     override fun onSaveInstanceState(): Parcelable? {
         val parcelable = super.onSaveInstanceState()
-        val result = ReboundScrollViewSavedState(parcelable)
+        val result = PagingScrollViewSavedState(parcelable)
         result.flingDisable = flingDisable
         result.activeItem = activeItem
         return result
     }
 
     override fun onRestoreInstanceState(state: Parcelable?) {
-        val reboundScrollViewSavedState = state as? ReboundScrollViewSavedState
-        super.onRestoreInstanceState(reboundScrollViewSavedState?.superState)
-        activeItem = reboundScrollViewSavedState?.activeItem ?: activeItem
-        flingDisable = reboundScrollViewSavedState?.flingDisable ?: flingDisable
+        val pagingScrollViewSavedState = state as? PagingScrollViewSavedState
+        super.onRestoreInstanceState(pagingScrollViewSavedState?.superState)
+        activeItem = pagingScrollViewSavedState?.activeItem ?: activeItem
+        flingDisable = pagingScrollViewSavedState?.flingDisable ?: flingDisable
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
@@ -353,7 +353,7 @@ open class ReboundScrollView(
 
 
 
-    private class ReboundScrollViewSavedState: BaseSavedState {
+    private class PagingScrollViewSavedState: BaseSavedState {
 
         var activeItem = 0
         var flingDisable = true
@@ -371,12 +371,12 @@ open class ReboundScrollView(
             out.writeByte(if (flingDisable) 1 else 0)
         }
 
-        companion object CREATOR : Parcelable.Creator<ReboundScrollViewSavedState> {
-            override fun createFromParcel(`in`: Parcel): ReboundScrollViewSavedState {
-                return ReboundScrollViewSavedState(`in`)
+        companion object CREATOR : Parcelable.Creator<PagingScrollViewSavedState> {
+            override fun createFromParcel(`in`: Parcel): PagingScrollViewSavedState {
+                return PagingScrollViewSavedState(`in`)
             }
 
-            override fun newArray(size: Int): Array<ReboundScrollViewSavedState?> {
+            override fun newArray(size: Int): Array<PagingScrollViewSavedState?> {
                 return arrayOfNulls(size)
             }
         }
@@ -384,7 +384,7 @@ open class ReboundScrollView(
 
 
     companion object {
-        private const val TAG = "ReboundScrollView"
+        private const val TAG = "PagingScrollView"
         private const val FLING_DURATION_MILLISEC = 275
         private const val MIN_SCROLL_TRIGGER = 20
     }

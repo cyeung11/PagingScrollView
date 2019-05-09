@@ -1,8 +1,8 @@
-# ReboundScrollView For Android
+# PagingScrollView For Android
 
-ReboundScrollView is a custom scroll view that offer a vertical ViewPager-like functionality.
+PagingScrollView is a custom scroll view that offer a vertical ViewPager-like functionality.
 
-![image](https://github.com/cyeung11/ReboundScrollView/blob/master/screenshot.gif)
+![image](https://github.com/cyeung11/PagingScrollView/blob/master/screenshot.gif)
 
 Requirements
 ------------
@@ -24,7 +24,7 @@ allprojects {
 #### App gradle
 ```
 dependencies {
-    implementation 'com.github.cyeung11:ReboundScrollView:1.0.1'
+    implementation 'com.github.cyeung11:PagingScrollView:1.0.1'
 }
 ```
 
@@ -33,7 +33,7 @@ How to use
 
 Xml layout
 ```
-  <com.jkjk.reboundscrollview.ReboundScrollView
+  <com.jkjk.pagingscrollview.PagingScrollView
       android:layout_width="match_parent"
       android:layout_height="match_parent">
 
@@ -50,7 +50,7 @@ Xml layout
 
         </LinearLayout>
 
-  </com.jkjk.reboundscrollview.ReboundScrollView>
+  </com.jkjk.pagingscrollview.PagingScrollView>
 ```
 
 
@@ -71,7 +71,7 @@ app:page_change_threshold="50"
 #### Listener
 ```
   addOnPageChangeListener(object : OnPageChangeListener {
-        override fun onPageChange(view: ReboundScrollView, newPage: Int) {
+        override fun onPageChange(view: PagingScrollView, newPage: Int) {
             ...
         }
     })

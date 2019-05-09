@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <declare-styleable name="ReboundScrollView">
+    <declare-styleable name="PagingScrollView">
         <attr name="page_change_threshold" format="integer" />
     </declare-styleable>
 
