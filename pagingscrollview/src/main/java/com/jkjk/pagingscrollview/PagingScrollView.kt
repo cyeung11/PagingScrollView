@@ -8,6 +8,7 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -19,21 +20,25 @@ open class PagingScrollView(
     attrs: AttributeSet?,
     defStyleAttr: Int
 
-) : ScrollView(context, attrs, defStyleAttr), View.OnTouchListener, GestureDetector.OnGestureListener {
+) : ScrollView(context, attrs, defStyleAttr), GestureDetector.OnGestureListener {
 
     var pageChangeThreshold = 20
 
-    protected var gestureDetector: GestureDetector? = null
+    protected var gestureDetector: GestureDetector
 
-    protected var scroller: Scroller? = null
+    protected var scroller: Scroller
 
-    var activeItem = 0
+    var page = 0
         private set
 
     private var isInitiation = true
     private var flingDisable = true
 
-    protected var llMain: LinearLayout? = null
+    private var llMain: LinearLayout? = null
+        set(value) {
+            field = value
+            page = 0
+        }
 
     private var y1 = 0f
     private var y2 = 0f
@@ -68,42 +73,102 @@ open class PagingScrollView(
         )
         gestureDetector = GestureDetector(context, this)
         scroller = Scroller(context, DecelerateInterpolator())
-
-        setOnTouchListener(this)
-
     }
 
     override fun onFinishInflate() {
         super.onFinishInflate()
         val view = if (childCount > 0) getChildAt(0) else null
 
-        if (view != null && view is LinearLayout) {
-            llMain = view
-        } else {
-            throw IllegalArgumentException("The view under PagingScrollView must be a LinearLayout")
+        if (view != null) {
+            if (view is LinearLayout) {
+                llMain = view
+            } else {
+                throw IllegalArgumentException("The view under PagingScrollView can only be a LinearLayout")
+            }
         }
+    }
+
+    override fun addView(child: View?, index: Int, params: ViewGroup.LayoutParams?) {
+        super.addView(child, index, params)
+        if (llMain == null) {
+            if (child is LinearLayout) {
+                llMain = child
+            } else {
+                throw IllegalArgumentException("The view under PagingScrollView can only be a LinearLayout")
+            }
+        }
+    }
+
+    override fun addViewInLayout(child: View?, index: Int, params: ViewGroup.LayoutParams?, preventRequestLayout: Boolean): Boolean {
+        val result = super.addViewInLayout(child, index, params, preventRequestLayout)
+        if (llMain == null) {
+            if (child is LinearLayout) {
+                llMain = child
+            } else {
+                throw IllegalArgumentException("The view under PagingScrollView can only be a LinearLayout")
+            }
+        }
+        return result
+    }
+
+    override fun removeViews(start: Int, count: Int) {
+        if (start == 0 && count > 0) {
+            llMain = null
+        }
+        super.removeViews(start, count)
+    }
+
+    override fun removeViewsInLayout(start: Int, count: Int) {
+        if (start == 0 && count > 0) {
+            llMain = null
+        }
+        super.removeViewsInLayout(start, count)
+    }
+    
+    override fun removeViewAt(index: Int) {
+        if (index == 0) {
+            llMain = null
+        }
+        super.removeViewAt(index)
+    }
+    
+    override fun removeAllViews() {
+        llMain = null
+        super.removeAllViews()
+    }
+
+    override fun removeView(view: View?) {
+        if (view == llMain) {
+            llMain = null
+        }
+        super.removeView(view)
+    }
+
+    override fun removeAllViewsInLayout() {
+        llMain = null
+        super.removeAllViewsInLayout()
     }
 
     override fun onSaveInstanceState(): Parcelable? {
         val parcelable = super.onSaveInstanceState()
         val result = PagingScrollViewSavedState(parcelable)
         result.flingDisable = flingDisable
-        result.activeItem = activeItem
+        result.activeItem = page
         return result
     }
 
     override fun onRestoreInstanceState(state: Parcelable?) {
         val pagingScrollViewSavedState = state as? PagingScrollViewSavedState
         super.onRestoreInstanceState(pagingScrollViewSavedState?.superState)
-        activeItem = pagingScrollViewSavedState?.activeItem ?: activeItem
+        page = pagingScrollViewSavedState?.activeItem ?: page
         flingDisable = pagingScrollViewSavedState?.flingDisable ?: flingDisable
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
-        if (scroller!!.computeScrollOffset()) {
+        if (scroller.computeScrollOffset()) {
             // stop the fling
-            scroller!!.forceFinished(true)
-            this.scrollTo(scroller!!.currX, scroller!!.currY)
+            scroller.forceFinished(true)
+            this.scrollTo(scroller.currX, scroller.currY)
 
             // intercept down action when flinging to avoid unexpected click
             if (ev?.action == MotionEvent.ACTION_DOWN)
@@ -112,21 +177,12 @@ open class PagingScrollView(
         return super.onInterceptTouchEvent(ev)
     }
 
-    override fun onTouch(v: View, ev: MotionEvent?): Boolean {
+    override fun onTouchEvent(ev: MotionEvent?): Boolean {
+        var returnValue = false
 
-        var returnValue: Boolean? = null
-
-        try {
-            if (gestureDetector != null && ev != null && v == this) {
-                returnValue = gestureDetector?.onTouchEvent(ev)
-            }
-
-        } catch (e: NullPointerException) {
-            Log.e(TAG, "onTouch()", e)
-            return true
-        }catch (e:IllegalArgumentException){
-            Log.e(TAG, "onTouch()", e)
-            return true
+        if (ev != null) {
+            // intercept fling gesture
+            returnValue = gestureDetector.onTouchEvent(ev)
         }
 
         when (ev?.action) {
@@ -136,7 +192,7 @@ open class PagingScrollView(
                     isInitiation = false
                 }
             MotionEvent.ACTION_UP -> {
-                if (!scroller!!.computeScrollOffset()) {
+                if (!scroller.computeScrollOffset()) {
                     y2 = ev.y
                     dy = y2 - y1
 
@@ -144,12 +200,12 @@ open class PagingScrollView(
 
                     if (dy > MIN_SCROLL_TRIGGER) {
                         // scrolling down
-                        Log.i(TAG, "onTouch(): scrolling up")
+                        Log.v(TAG, "onTouch(): scrolling up")
                         reboundAfterMoveUpward()
                         returnValue = true
                     } else if (dy < -MIN_SCROLL_TRIGGER) {
                         // scrolling up
-                        Log.i(TAG, "onTouch(): scrolling down")
+                        Log.v(TAG, "onTouch(): scrolling down")
                         reboundAfterMoveDownward()
                         returnValue = true
                     }
@@ -157,44 +213,49 @@ open class PagingScrollView(
                 }
             }
         }
-        return returnValue ?: false
+
+        return if (returnValue) {
+            true
+        } else {
+            super.onTouchEvent(ev)
+        }
     }
 
     protected open fun reboundAfterMoveUpward() {
-        val oldActiveItem = activeItem
+        val oldActiveItem = page
 
         if (llMain == null || llMain?.childCount == 0) {
-            Log.i(TAG, "reboundAfterMoveUpward(): llMain == null ? ${llMain == null}")
+            Log.v(TAG, "reboundAfterMoveUpward(): llMain == null ? ${llMain == null}")
             return
         }
 
-        if (activeItem > 0) {
+        if (page > 0) {
             // calculate the threshold to trigger change of page
             val minScrollYToTriggerPageUp =
-                llMain!!.getChildAt(activeItem).top - (Math.min(
-                    llMain!!.getChildAt(activeItem - 1).measuredHeight,
+                llMain!!.getChildAt(page).top - (Math.min(
+                    llMain!!.getChildAt(page - 1).measuredHeight,
                     this.measuredHeight) *
                         (pageChangeThreshold / 100f))
 
-            Log.i(TAG, "Upward(), y2:$y2, y1:$y1, dy:$dy, minFactor:$minScrollYToTriggerPageUp")
+            Log.v(TAG, "Upward(), y2:$y2, y1:$y1, dy:$dy, minFactor:$minScrollYToTriggerPageUp")
             if (scrollY - dy < minScrollYToTriggerPageUp) {
-                Log.i(TAG, "Upward, distance enough()")
-                if (activeItem - 1 >= 0) {
-                    activeItem--
+                Log.v(TAG, "Upward, distance enough()")
+                if (page - 1 >= 0) {
+                    page--
                 }
             }
         }
 
-        val activeView = llMain!!.getChildAt(activeItem)
+        val activeView = llMain!!.getChildAt(page)
 
         // Fling is not available if the active view is the same size or smaller than screen
         flingDisable = activeView.measuredHeight <= this.measuredHeight
 
-        if (oldActiveItem != activeItem) {
+        if (oldActiveItem != page) {
             // Rebound to bottom of the new page
             this.smoothScrollTo(0, Math.max(activeView.bottom - this.measuredHeight, activeView.top))
             onPageChangeListeners.forEach {
-                it.onPageChange(this, activeItem)
+                it.onPageChange(this, page)
             }
 
         } else if (flingDisable || scrollY < activeView.top) {
@@ -206,37 +267,37 @@ open class PagingScrollView(
     }
 
     protected open fun reboundAfterMoveDownward() {
-        val oldActiveItem = activeItem
+        val oldActiveItem = page
 
         if (llMain == null || llMain?.childCount == 0) {
-            Log.i(TAG, "reboundAfterMoveDownward(): llMain == null ? ${llMain == null}")
+            Log.v(TAG, "reboundAfterMoveDownward(): llMain == null ? ${llMain == null}")
             return
         }
 
-        if (activeItem < llMain!!.childCount - 1) {
+        if (page < llMain!!.childCount - 1) {
             val minScrollYToTriggerPageDown =
                 Math.min(
-                    llMain!!.getChildAt(activeItem + 1).measuredHeight,
+                    llMain!!.getChildAt(page + 1).measuredHeight,
                     this.measuredHeight) *
-                        (pageChangeThreshold / 100f) + llMain!!.getChildAt(activeItem).bottom
+                        (pageChangeThreshold / 100f) + llMain!!.getChildAt(page).bottom
 
             if (scrollY + this.measuredHeight - dy > minScrollYToTriggerPageDown) {
-                Log.i(TAG, "Downward(), distance enough()")
-                if (activeItem + 1 < llMain!!.childCount) {
-                    activeItem++
+                Log.v(TAG, "Downward(), distance enough()")
+                if (page + 1 < llMain!!.childCount) {
+                    page++
                 }
             }
         }
 
-        val activeView = llMain!!.getChildAt(activeItem)
+        val activeView = llMain!!.getChildAt(page)
 
         flingDisable = activeView.measuredHeight <= this.measuredHeight
 
-        if (oldActiveItem != activeItem) {
+        if (oldActiveItem != page) {
             // Rebound to top of the new page
             this.smoothScrollTo(0, Math.min(activeView.bottom - this.measuredHeight, activeView.top))
             onPageChangeListeners.forEach {
-                it.onPageChange(this, activeItem)
+                it.onPageChange(this, page)
             }
 
         } else if (flingDisable || scrollY + this.measuredHeight > activeView.bottom){
@@ -247,25 +308,25 @@ open class PagingScrollView(
     }
 
     override fun computeScroll() {
-        if (scroller!!.computeScrollOffset()) {
-            val activeView = llMain!!.getChildAt(activeItem)
+        if (scroller.computeScrollOffset()) {
+            val activeView = llMain!!.getChildAt(page)
 
             when {
-                scroller!!.currY < activeView.top -> {
+                scroller.currY < activeView.top -> {
                     // stop at top and don't allow over scroll to other view
-                    scroller!!.forceFinished(true)
+                    scroller.forceFinished(true)
                     scrollTo(0, activeView.top)
 
                 }
-                scroller!!.currY > activeView.bottom - this.measuredHeight -> {
+                scroller.currY > activeView.bottom - this.measuredHeight -> {
                     // stop at bottom and don't allow over scroll to other view
-                    scroller!!.forceFinished(true)
+                    scroller.forceFinished(true)
                     scrollTo(0, activeView.bottom - this.measuredHeight)
 
                 }
                 else -> {
                     // Normal situation
-                    scrollTo(scroller!!.currX, scroller!!.currY)
+                    scrollTo(scroller.currX, scroller.currY)
                     invalidate()
                 }
             }
@@ -277,52 +338,49 @@ open class PagingScrollView(
      */
     override fun onFling(e1: MotionEvent?, e2: MotionEvent?, velocityX: Float,
                          velocityY: Float): Boolean {
-        Log.d(TAG, "onFling()")
+        Log.v(TAG, "onFling()")
         if (flingDisable)
             return false
 
         val scrollDistanceY = velocityY * FLING_DURATION_MILLISEC / 1000
 
-        if ( activeItem - 1 >= 0 &&
-            scrollY <= llMain!!.getChildAt(activeItem).top
-            && scrollY - scrollDistanceY < (llMain!!.getChildAt(activeItem - 1).measuredHeight * (100 - pageChangeThreshold) / 100f) + llMain!!.getChildAt(activeItem - 1).top) {
+        if ( page - 1 >= 0 &&
+            scrollY <= llMain!!.getChildAt(page).top
+            && scrollY - scrollDistanceY < (llMain!!.getChildAt(page - 1).measuredHeight * (100 - pageChangeThreshold) / 100f) + llMain!!.getChildAt(page - 1).top) {
             //if the scroll position is up one page
             // Filp up page
-            activeItem -= 1
-            flingDisable = llMain!!.getChildAt(activeItem).measuredHeight <= this.measuredHeight
-            this.smoothScrollTo(0, Math.max(llMain!!.getChildAt(activeItem).top, llMain!!.getChildAt(activeItem).bottom - this.measuredHeight))
+            page -= 1
+            flingDisable = llMain!!.getChildAt(page).measuredHeight <= this.measuredHeight
+            this.smoothScrollTo(0, Math.max(llMain!!.getChildAt(page).top, llMain!!.getChildAt(page).bottom - this.measuredHeight))
 
             onPageChangeListeners.forEach {
-                it.onPageChange(this, activeItem)
+                it.onPageChange(this, page)
             }
 
-        } else if (activeItem + 1 < llMain!!.childCount &&
-            scrollY >= llMain!!.getChildAt(activeItem).bottom - this.measuredHeight &&
-            scrollY - scrollDistanceY > (llMain!!.getChildAt(activeItem + 1).measuredHeight * pageChangeThreshold / 100f) + llMain!!.getChildAt(activeItem).bottom - this.measuredHeight){
+        } else if (page + 1 < llMain!!.childCount &&
+            scrollY >= llMain!!.getChildAt(page).bottom - this.measuredHeight &&
+            scrollY - scrollDistanceY > (llMain!!.getChildAt(page + 1).measuredHeight * pageChangeThreshold / 100f) + llMain!!.getChildAt(page).bottom - this.measuredHeight){
             // Filp down page
-            activeItem += 1
-            flingDisable = llMain!!.getChildAt(activeItem).measuredHeight <= this.measuredHeight
-            this.smoothScrollTo(0, llMain!!.getChildAt(activeItem).top)
+            page += 1
+            flingDisable = llMain!!.getChildAt(page).measuredHeight <= this.measuredHeight
+            this.smoothScrollTo(0, llMain!!.getChildAt(page).top)
 
             onPageChangeListeners.forEach {
-                it.onPageChange(this, activeItem)
+                it.onPageChange(this, page)
             }
 
         } else {
             // Fling within the page
             val maxY = llMain!!.getChildAt(llMain!!.childCount - 1).bottom
-            scroller!!.fling(scrollX, scrollY, 0, -velocityY.toInt(), 0, 0, 0, maxY)
+            scroller.fling(scrollX, scrollY, 0, -velocityY.toInt(), 0, 0, 0, maxY)
             invalidate()
         }
         return true
     }
 
     override fun onDown(e: MotionEvent?): Boolean {
-        if (scroller!!.computeScrollOffset()) {
-            // Stop flinging immediate after touch
-            scroller!!.forceFinished(true)
-            this.scrollTo(scroller!!.currX, scroller!!.currY)
-        }
+        // Stop flinging immediate after touch
+        stopFling()
         return false
     }
 
@@ -351,16 +409,49 @@ open class PagingScrollView(
         onPageChangeListeners.remove(listener)
     }
 
+    open fun moveToPage(page: Int) {
+        if (llMain != null && page in llMain!!.childCount.downTo(0) && this.page != page) {
+            stopFling()
 
+            this.page = page
 
-    private class PagingScrollViewSavedState: BaseSavedState {
+            val activeView = llMain!!.getChildAt(this.page)
+
+            // Rebound to top of the new page
+            this.smoothScrollTo(0, activeView.top)
+            onPageChangeListeners.forEach {
+                it.onPageChange(this, this.page)
+            }
+        }
+    }
+
+    fun goToNextPage() {
+        if (llMain != null && (page + 1) in llMain!!.childCount.downTo(0)) {
+            moveToPage(page + 1)
+        }
+    }
+
+    fun goToLastPage() {
+        if (llMain != null && (page - 1) in llMain!!.childCount.downTo(0)) {
+            moveToPage(page - 1)
+        }
+    }
+
+    protected fun stopFling() {
+        if (scroller.computeScrollOffset()) {
+            scroller.forceFinished(true)
+            this.scrollTo(scroller.currX, scroller.currY)
+        }
+    }
+
+    protected open class PagingScrollViewSavedState: BaseSavedState {
 
         var activeItem = 0
         var flingDisable = true
 
         constructor(state: Parcelable?) : super(state)
 
-        private constructor(parcel: Parcel?): super(parcel){
+        protected constructor(parcel: Parcel?): super(parcel){
             activeItem = parcel?.readInt() ?: activeItem
             flingDisable = parcel?.readByte()?.compareTo(1) == 0
         }
