@@ -24,7 +24,7 @@ allprojects {
 #### App gradle
 ```
 dependencies {
-    implementation 'com.github.cyeung11:PagingScrollView:1.0.1'
+    implementation 'com.github.cyeung11:PagingScrollView:1.0.2'
 }
 ```
 
