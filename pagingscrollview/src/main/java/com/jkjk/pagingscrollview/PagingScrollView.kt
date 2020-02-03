@@ -477,6 +477,6 @@ open class PagingScrollView(
     companion object {
         private const val TAG = "PagingScrollView"
         private const val FLING_DURATION_MILLISEC = 275
-        private const val MIN_SCROLL_TRIGGER = 20
+        private const val MIN_SCROLL_TRIGGER = 1
     }
 }
