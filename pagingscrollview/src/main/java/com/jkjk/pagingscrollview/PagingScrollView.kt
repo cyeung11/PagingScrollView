@@ -44,6 +44,8 @@ open class PagingScrollView(
     private var y2 = 0f
     private var dy = 0f
 
+    private var nestScrollStartY = 0f
+
     protected var onPageChangeListeners = arrayListOf<OnPageChangeListener>()
 
     constructor(context: Context?, attrs: AttributeSet?) : this(context, attrs, 0)
@@ -201,12 +203,12 @@ open class PagingScrollView(
                     if (dy > MIN_SCROLL_TRIGGER) {
                         // scrolling down
                         Log.v(TAG, "onTouch(): scrolling up")
-                        reboundAfterMoveUpward()
+                        reboundAfterMoveUpward(scrollY - dy)
                         returnValue = true
                     } else if (dy < -MIN_SCROLL_TRIGGER) {
                         // scrolling up
                         Log.v(TAG, "onTouch(): scrolling down")
-                        reboundAfterMoveDownward()
+                        reboundAfterMoveDownward(scrollY - dy )
                         returnValue = true
                     }
 
@@ -221,7 +223,24 @@ open class PagingScrollView(
         }
     }
 
-    protected open fun reboundAfterMoveUpward() {
+    override fun onStartNestedScroll(child: View?, target: View?, nestedScrollAxes: Int): Boolean {
+        nestScrollStartY = scrollY.toFloat()
+        return super.onStartNestedScroll(child, target, nestedScrollAxes)
+    }
+
+    override fun onStopNestedScroll(target: View?) {
+        super.onStopNestedScroll(target)
+        val finalScrollY = scrollY.toFloat()
+        if (finalScrollY - nestScrollStartY > MIN_SCROLL_TRIGGER) {
+            // scrolling up
+            reboundAfterMoveDownward(finalScrollY)
+        } else if (finalScrollY - nestScrollStartY < -MIN_SCROLL_TRIGGER) {
+            // scrolling down
+            reboundAfterMoveUpward(finalScrollY)
+        }
+    }
+
+    protected open fun reboundAfterMoveUpward(finalScrollY: Float) {
         val oldActiveItem = page
 
         if (llMain == null || llMain?.childCount == 0) {
@@ -237,8 +256,7 @@ open class PagingScrollView(
                     this.measuredHeight) *
                         (pageChangeThreshold / 100f))
 
-            Log.v(TAG, "Upward(), y2:$y2, y1:$y1, dy:$dy, minFactor:$minScrollYToTriggerPageUp")
-            if (scrollY - dy < minScrollYToTriggerPageUp) {
+            if (finalScrollY < minScrollYToTriggerPageUp) {
                 Log.v(TAG, "Upward, distance enough()")
                 if (page - 1 >= 0) {
                     page--
@@ -266,7 +284,7 @@ open class PagingScrollView(
 
     }
 
-    protected open fun reboundAfterMoveDownward() {
+    protected open fun reboundAfterMoveDownward(finalScrollY: Float) {
         val oldActiveItem = page
 
         if (llMain == null || llMain?.childCount == 0) {
@@ -281,7 +299,7 @@ open class PagingScrollView(
                     this.measuredHeight) *
                         (pageChangeThreshold / 100f) + llMain!!.getChildAt(page).bottom
 
-            if (scrollY + this.measuredHeight - dy > minScrollYToTriggerPageDown) {
+            if (finalScrollY + this.measuredHeight> minScrollYToTriggerPageDown) {
                 Log.v(TAG, "Downward(), distance enough()")
                 if (page + 1 < llMain!!.childCount) {
                     page++
